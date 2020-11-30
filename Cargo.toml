@@ -1,5 +1,5 @@
 [package]
-name = "intro"
+name = "tanky"
 version = "0.1.0"
 authors = ["Jonathan Gerber <jlgerber@gmail.com>"]
 edition = "2018"

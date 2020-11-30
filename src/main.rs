@@ -1,17 +1,12 @@
-use bevy::{
-    input::mouse::{MouseMotion, MouseWheel},
-    prelude::*,
-};
+use bevy::prelude::*;
+use tanky::components::*;
+use tanky::systems::*;
 
-
-fn main() {
-    App::build()
-    .add_plugins(DefaultPlugins)
-    .add_plugin(HelloPlugin)
-    .run()
-}
+use std::collections::HashMap;
+type MaterialsMap = HashMap<&'static str, Handle<Texture>>;
 
 const  TXPATH: &str = env!("CARGO_MANIFEST_DIR");
+
 pub struct HelloPlugin;
 
 impl Plugin for HelloPlugin {
@@ -19,53 +14,13 @@ impl Plugin for HelloPlugin {
         app
         .add_startup_system(setup.system())
         .add_system(tank_movement_system.system())
-        .add_system(process_mouse_events_system.system())
+        .add_system(tank_mouse_events_system.system())
         ;
     }
 }
 
-struct Tank {
-    velocity: f32,
-    orientation: f32,
-    rotation: f32,
-    rx_rate: f32,
-    acc_rate: f32,
-    initialized: bool
-}
-
-const TO_RAD: f32 = std::f32::consts::PI / 180.0;
-
-fn tank_movement_system(
-    time: Res<Time>, 
-    mut tank_query: Query<(&mut Tank, &mut Transform)>
-) {
-    let delta_seconds =  time.delta_seconds;
-    for (mut tank, mut transform) in tank_query.iter_mut() {
-        if tank.initialized && tank.velocity > 0.0 {
-            tank.orientation += tank.rotation;
-
-            let  matrx = Mat4::from_quat(
-                Quat::from_rotation_z( tank.orientation * TO_RAD ));
-
-            let mattx = Mat4::from_translation( Vec3::unit_y()* tank.velocity * delta_seconds * 100.0);
-            let mat = matrx.mul_mat4(&mattx);
-            let tx = Transform::from_matrix(mat);
-            transform.translation += tx.translation;
-            transform.rotation = if tank.velocity < 0.00001  { transform.rotation } else {tx.rotation};
-        } else {
-            tank.orientation += tank.rotation;
-            let  matrx = Mat4::from_quat(
-                Quat::from_rotation_z(tank.orientation * TO_RAD ));
-           transform.rotation = Transform::from_matrix(matrx).rotation;
-           tank.initialized = true;
-        }
-    }
-}
-
-use std::collections::HashMap;
-type MaterialsMap = HashMap<&'static str, Handle<Texture>>;
 // setup a tank
-fn setup_tank(asset_server: &Res<AssetServer>,  matmap: &mut MaterialsMap)  {
+fn setup_tank1(asset_server: &Res<AssetServer>,  matmap: &mut MaterialsMap)  {
     let mut tank1_path = std::path::PathBuf::from(TXPATH);
     let mut turret1_path = tank1_path.clone();
     let mut gun1_path = tank1_path.clone();
@@ -86,7 +41,7 @@ fn setup(
 ) {
     
     let mut matmap = MaterialsMap::new();
-    setup_tank(&asset_server, &mut matmap);
+    setup_tank1(&asset_server, &mut matmap);
 
     commands
         .spawn(Camera2dComponents::default())
@@ -97,13 +52,13 @@ fn setup(
             transform: Transform::from_scale(Vec3::new(0.5,0.5,0.5)),
             ..Default::default()
         })
+        .with(Velocity(0.0))
+        .with(Orientation(45.0))
+        .with(Rotation(0.0))
         .with(Tank {
-            velocity: 0.0, 
-            orientation: 45.0, 
-            rotation: 0.0, 
             rx_rate: 0.002, 
             acc_rate: 0.1,
-            initialized: false
+            //initialized: false
         })
         .with_children(|parent| {
             parent.spawn(SpriteComponents {
@@ -127,36 +82,10 @@ fn setup(
 
 
 
-#[derive(Default)]
-struct State {
-    mouse_motion_event_reader: EventReader<MouseMotion>,
-    mouse_wheel_event_reader: EventReader<MouseWheel>,
-}
 
-/// This system prints out all mouse events as they come in
-fn process_mouse_events_system(
-    mut state: Local<State>,
-    mouse_motion_events: Res<Events<MouseMotion>>,
-    mouse_wheel_events: Res<Events<MouseWheel>>,
-    mouse_input: Res<Input<MouseButton>>,
-   mut tank_query: Query<(
-       &mut Tank, 
-    )>
-) {
-    
-    for event in state.mouse_motion_event_reader.iter(&mouse_motion_events) {
-        if mouse_input.pressed(MouseButton::Left) {
-            for (mut tank, 
-            ) in tank_query.iter_mut() {
-                tank.rotation -= event.delta.x() * tank.rx_rate;
-            }
-        }
-    }
-
-
-    for event in state.mouse_wheel_event_reader.iter(&mouse_wheel_events) {
-        for (mut tank,) in tank_query.iter_mut() {
-            tank.velocity = (tank.velocity + event.y * tank.acc_rate).max(0.0);
-        }
-    }
+fn main() {
+    App::build()
+    .add_plugins(DefaultPlugins)
+    .add_plugin(HelloPlugin)
+    .run()
 }
