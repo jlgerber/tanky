@@ -1,4 +1,9 @@
-use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}};
+use bevy::{prelude::*, 
+    input::mouse::{
+        MouseMotion, 
+        //MouseWheel
+    }
+};
 
 use crate::components::*;
 use crate::state::*;
@@ -35,7 +40,7 @@ pub fn tank_movement_system(
 pub fn mouse_events_system(
     mut state: Local<State>,
     mouse_motion_events: Res<Events<MouseMotion>>,
-    mouse_wheel_events: Res<Events<MouseWheel>>,
+    //mouse_wheel_events: Res<Events<MouseWheel>>,
     mouse_input: Res<Input<MouseButton>>,
     mut tank_query: Query<(&mut Tank, &mut Rotation, &mut Velocity)>
 ) {
