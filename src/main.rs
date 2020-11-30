@@ -1,7 +1,6 @@
 use bevy::{
-    input::mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+    input::mouse::{MouseMotion, MouseWheel},
     prelude::*,
-    window::CursorMoved,
 };
 
 
