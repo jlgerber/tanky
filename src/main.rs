@@ -29,7 +29,8 @@ struct Tank {
     velocity: f32,
     orientation: f32,
     rotation: f32,
-    max_rx_rate: f32,
+    rx_rate: f32,
+    acc_rate: f32,
     initialized: bool
 }
 
@@ -37,27 +38,11 @@ const TO_RAD: f32 = std::f32::consts::PI / 180.0;
 
 fn tank_movement_system(
     time: Res<Time>, 
-    keyboard_input: Res<Input<KeyCode>>,
     mut tank_query: Query<(&mut Tank, &mut Transform)>
 ) {
     let delta_seconds =  time.delta_seconds;
     for (mut tank, mut transform) in tank_query.iter_mut() {
-        if keyboard_input.pressed(KeyCode::Left) {
-            tank.rotation += if keyboard_input.pressed(KeyCode::LShift) {1.0} else {0.1};
-            tank.rotation = tank.rotation.min(tank.max_rx_rate);
-        } else if keyboard_input.pressed(KeyCode::Right) {
-            tank.rotation -= if keyboard_input.pressed(KeyCode::LShift) {1.0} else {0.1};
-            tank.rotation = tank.rotation.max(-tank.max_rx_rate);
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            
-            tank.velocity *= 0.9;
-        } else if keyboard_input.pressed(KeyCode::Up) {
-            tank.velocity = (tank.velocity * 1.2).min(5.0).max(0.01);
-            
-        }
-
-        if tank.initialized {
+        if tank.initialized && tank.velocity > 0.0 {
             tank.orientation += tank.rotation;
 
             let  matrx = Mat4::from_quat(
@@ -69,8 +54,9 @@ fn tank_movement_system(
             transform.translation += tx.translation;
             transform.rotation = if tank.velocity < 0.00001  { transform.rotation } else {tx.rotation};
         } else {
+            tank.orientation += tank.rotation;
             let  matrx = Mat4::from_quat(
-                Quat::from_rotation_z(tank.orientation * TO_RAD + tank.rotation * TO_RAD));
+                Quat::from_rotation_z(tank.orientation * TO_RAD ));
            transform.rotation = Transform::from_matrix(matrx).rotation;
            tank.initialized = true;
         }
@@ -94,7 +80,7 @@ fn setup(
     let turret1_handle = asset_server.load(turret1_path);
     let gun1_handle = asset_server.load(gun1_path);
 
-    let far = 4000.0;
+    //let far = 4000.0;
     commands
         .spawn(Camera2dComponents::default())
         .spawn(SpriteComponents {
@@ -106,7 +92,8 @@ fn setup(
             velocity: 0.0, 
             orientation: 45.0, 
             rotation: 0.0, 
-            max_rx_rate: 10.0, 
+            rx_rate: 0.002, 
+            acc_rate: 0.1,
             initialized: false
         })
         .with_children(|parent| {
@@ -130,36 +117,34 @@ fn setup(
 
 #[derive(Default)]
 struct State {
-    mouse_button_event_reader: EventReader<MouseButtonInput>,
     mouse_motion_event_reader: EventReader<MouseMotion>,
-    cursor_moved_event_reader: EventReader<CursorMoved>,
     mouse_wheel_event_reader: EventReader<MouseWheel>,
 }
 
 /// This system prints out all mouse events as they come in
 fn print_mouse_events_system(
     mut state: Local<State>,
-    mouse_button_input_events: Res<Events<MouseButtonInput>>,
     mouse_motion_events: Res<Events<MouseMotion>>,
-    cursor_moved_events: Res<Events<CursorMoved>>,
     mouse_wheel_events: Res<Events<MouseWheel>>,
+    mouse_input: Res<Input<MouseButton>>,
+   mut tank_query: Query<(
+       &mut Tank, 
+    )>
 ) {
-    for event in state
-        .mouse_button_event_reader
-        .iter(&mouse_button_input_events)
-    {
-        println!("{:?}", event);
-    }
-
+    
     for event in state.mouse_motion_event_reader.iter(&mouse_motion_events) {
-        println!("{:?}", event);
+        if mouse_input.pressed(MouseButton::Left) {
+            for (mut tank, 
+            ) in tank_query.iter_mut() {
+                tank.rotation -= event.delta.x() * tank.rx_rate;
+            }
+        }
     }
 
-    for event in state.cursor_moved_event_reader.iter(&cursor_moved_events) {
-        println!("{:?}", event);
-    }
 
     for event in state.mouse_wheel_event_reader.iter(&mouse_wheel_events) {
-        println!("{:?}", event);
+        for (mut tank,) in tank_query.iter_mut() {
+            tank.velocity = (tank.velocity + event.y * tank.acc_rate).max(0.0);
+        }
     }
 }
