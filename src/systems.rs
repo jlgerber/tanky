@@ -42,18 +42,19 @@ pub fn mouse_events_system(
     
     for event in state.mouse_motion_event_reader.iter(&mouse_motion_events) {
         if mouse_input.pressed(MouseButton::Left) {
-            for (tank, mut rotation, _
+            for (tank, mut rotation, mut velocity
             ) in tank_query.iter_mut() {
                 rotation.0 -= event.delta.x() * tank.rx_rate;
+                velocity.0 = (velocity.0 - event.delta.y() * tank.acc_rate * 0.1).max(0.0);
             }
         }
     }
 
 
-    for event in state.mouse_wheel_event_reader.iter(&mouse_wheel_events) {
-        for (tank, _rotation, mut velocity) in tank_query.iter_mut() {
-            velocity.0 = (velocity.0 + event.y * tank.acc_rate).max(0.0);
-        }
-    }
+    // for event in state.mouse_wheel_event_reader.iter(&mouse_wheel_events) {
+    //     for (tank, _rotation, mut velocity) in tank_query.iter_mut() {
+    //         velocity.0 = (velocity.0 + event.y * tank.acc_rate).max(0.0);
+    //     }
+    // }
 }
 
