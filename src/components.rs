@@ -12,5 +12,4 @@ pub struct Rotation(pub f32);
 pub struct Tank {
     pub rx_rate: f32,
     pub acc_rate: f32,
-   // initialized: bool
 }

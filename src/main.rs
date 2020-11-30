@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use tanky::components::*;
 use tanky::systems::*;
-
+use tanky::constants::TXPATH;
 use std::collections::HashMap;
 type MaterialsMap = HashMap<&'static str, Handle<Texture>>;
 
-const  TXPATH: &str = env!("CARGO_MANIFEST_DIR");
 
 pub struct HelloPlugin;
 
@@ -14,7 +13,7 @@ impl Plugin for HelloPlugin {
         app
         .add_startup_system(setup.system())
         .add_system(tank_movement_system.system())
-        .add_system(tank_mouse_events_system.system())
+        .add_system(mouse_events_system.system())
         ;
     }
 }
