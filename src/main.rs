@@ -8,7 +8,6 @@ fn main() {
     App::build()
     .add_plugins(DefaultPlugins)
     .add_plugin(HelloPlugin)
-    .add_system(print_mouse_events_system.system())
     .run()
 }
 
@@ -20,6 +19,7 @@ impl Plugin for HelloPlugin {
         app
         .add_startup_system(setup.system())
         .add_system(tank_movement_system.system())
+        .add_system(process_mouse_events_system.system())
         ;
     }
 }
@@ -62,6 +62,22 @@ fn tank_movement_system(
     }
 }
 
+use std::collections::HashMap;
+type MaterialsMap = HashMap<&'static str, Handle<Texture>>;
+// setup a tank
+fn setup_tank(asset_server: &Res<AssetServer>,  matmap: &mut MaterialsMap)  {
+    let mut tank1_path = std::path::PathBuf::from(TXPATH);
+    let mut turret1_path = tank1_path.clone();
+    let mut gun1_path = tank1_path.clone();
+
+    tank1_path.push("assets/PNG/Hulls_Color_C/Hull_01.png");
+    gun1_path.push("assets/PNG/Weapon_Color_C/Gun_01_A.png");
+    turret1_path.push("assets/PNG/Weapon_Color_C/Gun_01_B.png");
+
+    matmap.insert("tank1_body", asset_server.load(tank1_path));
+    matmap.insert("tank1_turret",asset_server.load(turret1_path));
+    matmap.insert("tank1_gun",asset_server.load(gun1_path));
+}
 
 fn setup(
     mut commands: Commands,
@@ -69,21 +85,15 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
     
-    let mut tank1_path = std::path::PathBuf::from(TXPATH);
-    let mut turret1_path = tank1_path.clone();
-    let mut gun1_path = tank1_path.clone();
-    tank1_path.push("assets/PNG/Hulls_Color_C/Hull_01.png");
-    gun1_path.push("assets/PNG/Weapon_Color_C/Gun_01_A.png");
-    turret1_path.push("assets/PNG/Weapon_Color_C/Gun_01_B.png");
-    let texture_handle = asset_server.load(tank1_path);
-    let turret1_handle = asset_server.load(turret1_path);
-    let gun1_handle = asset_server.load(gun1_path);
+    let mut matmap = MaterialsMap::new();
+    setup_tank(&asset_server, &mut matmap);
 
-    //let far = 4000.0;
     commands
         .spawn(Camera2dComponents::default())
         .spawn(SpriteComponents {
-            material: materials.add(texture_handle.into()),
+            material: materials.add(
+                matmap.remove("tank1_body").unwrap().into()
+        ),
             transform: Transform::from_scale(Vec3::new(0.5,0.5,0.5)),
             ..Default::default()
         })
@@ -97,19 +107,22 @@ fn setup(
         })
         .with_children(|parent| {
             parent.spawn(SpriteComponents {
-                material: materials.add(turret1_handle.into()),
+                material: materials.add(
+                    matmap.remove("tank1_turret").unwrap().into()
+                ),
                 transform: Transform::from_translation(Vec3::new(0.0,-20.0,2.0)),
                 ..Default::default()
             })
             .with_children(|par| {
                 par.spawn(SpriteComponents{
-                    material: materials.add(gun1_handle.into()),
+                    material: materials.add(
+                        matmap.remove("tank1_gun").unwrap().into()
+                    ),
                     transform: Transform::from_translation(Vec3::new(0.0,100.0,1.0)),
                     ..Default::default()
                 });
             });
-        })
-        ;
+        });
 }
 
 
@@ -121,7 +134,7 @@ struct State {
 }
 
 /// This system prints out all mouse events as they come in
-fn print_mouse_events_system(
+fn process_mouse_events_system(
     mut state: Local<State>,
     mouse_motion_events: Res<Events<MouseMotion>>,
     mouse_wheel_events: Res<Events<MouseWheel>>,
